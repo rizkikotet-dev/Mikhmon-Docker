@@ -1,0 +1,175 @@
+name: Docker Build and Publish
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'Custom Docker tag (leave empty for default)'
+        required: false
+        default: ''
+
+env:
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/mikhmon
+  GHCR_IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          buildkitd-flags: --debug
+
+      - name: Login to DockerHub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Set custom tag if provided
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.docker_tag != ''
+        run: |
+          echo "CUSTOM_TAG=${{ github.event.inputs.docker_tag }}" >> $GITHUB_ENV
+          echo "Using custom tag: ${{ github.event.inputs.docker_tag }}"
+
+      - name: Set default tag
+        id: set_tag
+        run: |
+          DEFAULT_TAG="latest"
+          
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.docker_tag }}" != "" ]]; then
+            echo "DOCKER_TAG=${{ github.event.inputs.docker_tag }}" >> $GITHUB_ENV
+            echo "Using custom tag: ${{ github.event.inputs.docker_tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "DOCKER_TAG=${VERSION}" >> $GITHUB_ENV
+            echo "Using version tag: ${VERSION}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BRANCH=${GITHUB_REF#refs/heads/}
+            if [[ "$BRANCH" == "main" ]]; then
+              echo "DOCKER_TAG=latest" >> $GITHUB_ENV
+              echo "Using default tag for main: latest"
+            else
+              echo "DOCKER_TAG=$BRANCH" >> $GITHUB_ENV
+              echo "Using branch tag: $BRANCH"
+            fi
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "DOCKER_TAG=PR-${{ github.event.number }}" >> $GITHUB_ENV
+            echo "Using pull request tag: PR-${{ github.event.number }}"
+          else
+            echo "DOCKER_TAG=$DEFAULT_TAG" >> $GITHUB_ENV
+            echo "Using default tag: $DEFAULT_TAG"
+          fi
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKERHUB_IMAGE }}
+            ${{ env.GHCR_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.DOCKER_TAG }}
+          labels: |
+            org.opencontainers.image.title=PHPNuxBill
+            org.opencontainers.image.description=PHP Mikrotik Billing - Voucher management for Mikrotik Hotspot
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.created={{date 'yyyy-MM-dd'}}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.icon=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAG9SURBVHic7Zq9TsMwFIUPDAwMHRgYGBh4AUR5CgYGJEaEhBASQoiRx2BhgLRbx3RrulZVpYqK1D/Zru3EuT7D/SVXStX43u+4dZzEDgBCCCGEEMJ/BgDOAHwAWNRc3wBcASh0Y94hALgHsETalAWASx2590wAnJNJGQN4BDAB0K25TgCMGDtl3LOOiSgDxPcdAXBSE9MBcMPEdDXPvbQ0IZPYBnDPxM0AHDW8dwTgnon7BLDTMjeyDpgzD+9axE2Z2HlKZtB0dXkKTP0iIS9iDF2kZgSgk4r/YhLwWLNKxDCAXwD3qUgTMYrYZrm43wCeNeTG0quydobVhFsDmDLP3QK41pSXhdTiX6Lk/x1MIpCnp4rV8tnjTQBTZg4Mms6BKxG75HK6c0j6S0wAnDNJUwDvwnkhuU8AjgHcMM+9AzgUzm2dVPFLBwsxoaDxz7lKkYPyj/K6OVWKdzovpBJQOMhPJl7gIOdJBPIc+C+Xm4B5YwQlOAEtJpYQ0HJ8MvECThRuv8QOpygn/xSY6cz6Jxo3IEoIIYQQQgghhPCWDcxWmK2mwXplC43xtGwhjS20wn+E2VL/IYQQQgghhBBC2M8fvGBHk0mcE2IAAAAASUVORK5CYII=
+
+      - name: Display tag to be used
+        run: |
+          echo "Tag to be used: ${{ env.DOCKER_TAG }}"
+          echo "Complete tag: ${{ steps.meta.outputs.tags }}"
+
+      - name: Build Docker image (no push for pull request)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Build and push image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Summary Build
+        run: |
+          {
+            echo "## 🐳 Docker Build Summary"
+            echo "✅ Image tags:"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo "✅ Build platforms:"
+            echo '```'
+            echo "linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le,linux/mips64,linux/loong64,linux/arm/v7,linux/arm/v6"
+            echo '```'
+            echo "✅ Docker metadata:"
+            echo '```json'
+            echo '${{ steps.meta.outputs.json }}' | jq '.'
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
