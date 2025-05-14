@@ -1,0 +1,14 @@
+services:
+  mikhmon:
+    container_name: mikhmon
+    pull_policy: always
+    build: .
+    #image: rizkikotet/mikhmon:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - mikhmon_data:/var/www/html
+
+volumes:
+  mikhmon_data:
