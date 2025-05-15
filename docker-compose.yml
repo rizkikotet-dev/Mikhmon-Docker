@@ -1,19 +1,19 @@
+version: "3.8"
+
 services:
   mikhmon:
     container_name: Mikhmon
-    pull_policy: always
     build: .
-    #image: rizkikotet/mikhmon:latest
+    # image: rizkikotet/mikhmon:latest
     restart: unless-stopped
     ports:
       - "80:80"
-      #- "443:443"
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Jakarta
     volumes:
-      - mikhmon_data:/config
+      - mikhmon_data:/var/www/html
 
 volumes:
   mikhmon_data:
