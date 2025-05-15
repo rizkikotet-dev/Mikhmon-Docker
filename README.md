@@ -49,7 +49,7 @@ Mikhmon-Docker mengemas aplikasi [Mikhmon](https://laksa19.github.io/?mikhmon/v3
    http://localhost:80
    ```
 
-### Konfigurasi Docker Compose
+### Konfigurasi Docker Compose ( **Rekomendasi** )
 
 File `docker-compose.yml` yang tersedia:
 ```yaml
@@ -95,7 +95,6 @@ docker-compose up -d --build
 
 - **Tidak dapat terhubung ke Mikhmon**: Pastikan port 80 tidak digunakan oleh aplikasi lain
 - **Tidak dapat terhubung ke router**: Verifikasi bahwa API MikroTik diaktifkan dan kredensial benar
-- **Data hilang setelah restart**: Pastikan volume `mikhmon_data` dikonfigurasi dengan benar
 
 ## Referensi dan Sumber
 
