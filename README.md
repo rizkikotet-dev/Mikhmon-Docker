@@ -62,14 +62,12 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    environment:
-      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    command: 
-      - /bin/bash
-      - -c
-      - /etc/supervisor/conf.d/supervisord.conf
     volumes:
       - mikhmon_data:/var/www/html
+
+volumes:
+  mikhmon_data:
+    driver: local
 ```
 
 ### Konfigurasi Awal Mikhmon

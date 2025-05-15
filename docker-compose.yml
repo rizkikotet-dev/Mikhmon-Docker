@@ -7,10 +7,9 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    environment:
-      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - mikhmon_data:/var/www/html
 
 volumes:
   mikhmon_data:
+    driver: local
