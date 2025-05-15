@@ -17,4 +17,3 @@ services:
 
 volumes:
   mikhmon_data:
-    driver: local

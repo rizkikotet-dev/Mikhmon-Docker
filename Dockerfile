@@ -1,32 +1,35 @@
+# Base image: lightweight Nginx container with Alpine base
 FROM ghcr.io/linuxserver/nginx:latest
-LABEL Maintainer="rizkikotet-dev <rizkidhc31@gmail.com>"
-LABEL Description="Lightweight container with Nginx & PHP based on Alpine Linux."
-# Setup document root
-WORKDIR /var/www/html
 
+# Metadata
+LABEL maintainer="rizkikotet-dev <rizkidhc31@gmail.com>" \
+      description="Lightweight container with Nginx & PHP based on Alpine Linux."
 
-# Install packages and remove default server definition
+# Set working directory to Nginx config directory
+WORKDIR /config
+
+# Install required packages
 RUN apk add --no-cache \
-  bash \
-  curl \
-  freetype-dev \
-  libjpeg-turbo-dev \
-  libpng-dev \
-  libzip-dev \
-  nano \
-  unzip \
-  zip \
-  zlib \
-  zlib-dev
+    bash \
+    curl \
+    nano \
+    unzip \
+    zip \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    zlib-dev
 
-# Add application
+# Copy application source files
 COPY src/ /config/www/
 
-# Expose the port nginx is reachable on
+# Expose ports for HTTP and HTTPS
 EXPOSE 80 443
 
-# Add a volume to allow access to files on the host
-VOLUME [ "/config" ]
+# Declare volume for persistent configuration and web content
+VOLUME ["/config"]
 
-# Configure a healthcheck to validate that everything is up&running
-HEALTHCHECK --timeout=10s CMD curl --silent --fail http://127.0.0.1:80/fpm-ping || exit 1
+# Health check to ensure Nginx and PHP-FPM are running
+HEALTHCHECK --interval=30s --timeout=10s \
+  CMD curl --silent --fail http://127.0.0.1/fpm-ping || exit 1
