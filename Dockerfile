@@ -1,35 +1,27 @@
-# Base image: lightweight Nginx container with Alpine base
+# Base image: Nginx + Alpine
 FROM ghcr.io/linuxserver/nginx:latest
 
 # Metadata
 LABEL maintainer="rizkikotet-dev <rizkidhc31@gmail.com>" \
       description="Lightweight container with Nginx & PHP based on Alpine Linux."
 
-# Set working directory to Nginx config directory
+# Set working directory
 WORKDIR /config
 
-# Install required packages
-RUN apk add --no-cache \
-    bash \
-    curl \
-    nano \
-    unzip \
-    zip \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libpng-dev \
-    libzip-dev \
-    zlib-dev
+# Copy default source files (will be copied to /config on first run)
+COPY src/ /defaults/www/
 
-# Copy application source files
-COPY src/ /config/www/
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Expose ports for HTTP and HTTPS
+# Expose ports
 EXPOSE 80 443
 
-# Declare volume for persistent configuration and web content
+# Declare volume for persistent config & web content
 VOLUME ["/config"]
 
-# Health check to ensure Nginx and PHP-FPM are running
-HEALTHCHECK --interval=30s --timeout=10s \
-  CMD curl --silent --fail http://127.0.0.1/fpm-ping || exit 1
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Optional CMD (inherited from base image, or define here if needed)
