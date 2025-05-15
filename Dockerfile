@@ -1,4 +1,4 @@
-FROM linuxserver/nginx:latest
+FROM ghcr.io/linuxserver/nginx:latest
 LABEL Maintainer="rizkikotet-dev <rizkidhc31@gmail.com>"
 LABEL Description="Lightweight container with Nginx & PHP based on Alpine Linux."
 # Setup document root
