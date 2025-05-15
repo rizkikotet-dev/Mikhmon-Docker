@@ -69,6 +69,9 @@ COPY --chown=nobody src/ /var/www/html/
 # Expose the port nginx is reachable on
 EXPOSE 80
 
+# Add a volume to allow access to files on the host
+VOLUME [ "/var/www/html" ]
+
 # Let supervisord start nginx & php-fpm
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
