@@ -57,8 +57,7 @@ services:
   mikhmon:
     container_name: Mikhmon
     pull_policy: always
-    build: .
-    #image: rizkikotet/mikhmon:latest
+    image: rizkikotet/mikhmon:latest
     restart: unless-stopped
     ports:
       - "80:80"
@@ -67,11 +66,6 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Jakarta
-    volumes:
-      - mikhmon_data:/config
-
-volumes:
-  mikhmon_data:
 ```
 
 ### Konfigurasi Awal Mikhmon
@@ -86,22 +80,6 @@ volumes:
    - Masukkan alamat IP router
    - Masukkan username dan password API
    - Klik "Save"
-
-## Backup dan Restore
-
-### Backup Data
-Data Mikhmon disimpan dalam volume Docker `mikhmon_data`. Untuk backup:
-
-```bash
-docker run --rm -v mikhmon_data:/source -v $(pwd):/backup alpine tar -czf /backup/mikhmon_backup.tar.gz -C /source .
-```
-
-### Restore Data
-Untuk restore data dari backup:
-
-```bash
-docker run --rm -v mikhmon_data:/target -v $(pwd):/backup alpine sh -c "rm -rf /target/* && tar -xzf /backup/mikhmon_backup.tar.gz -C /target"
-```
 
 ## Pembaruan
 
