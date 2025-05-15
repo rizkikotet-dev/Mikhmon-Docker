@@ -68,6 +68,8 @@ WORKDIR ${DOCUMENT_ROOT}
 # Set permission
 RUN chown -R www:www ${DOCUMENT_ROOT} && chmod -R 755 ${DOCUMENT_ROOT}
 
+VOLUME ${DOCUMENT_ROOT}
+
 # Expose port
 EXPOSE 80
 
